@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate log;
 
+extern crate bytesize;
 extern crate clap;
 extern crate pretty_env_logger;
 
