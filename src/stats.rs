@@ -1,11 +1,22 @@
+use std::collections::HashMap;
 use std::fs;
 
-struct CPUInfo {
+use bytesize::ByteSize;
+
+pub struct CPUInfo {
     model_name: String,
     cpu_mhz: f64,
 }
 
-fn get_cpu_info() -> Vec<CPUInfo> {
+pub struct MemInfo<T> {
+    total: T,
+    free: T,
+    avail: T,
+    cached: T,
+    buffers: T,
+}
+
+pub fn get_cpu_info() -> Vec<CPUInfo> {
     let data = fs::read_to_string("/proc/cpuinfo").unwrap();
     let blocks = data
         .split("\n")
@@ -23,4 +34,27 @@ fn get_cpu_info() -> Vec<CPUInfo> {
     }
 
     cpus
+}
+
+pub fn get_mem_info() -> MemInfo<ByteSize> {
+    let data = fs::read_to_string("/proc/meminfo").unwrap();
+    let mem: HashMap<String, u64> = data
+        .split("\n")
+        .map(|kv| kv.split_whitespace().take(2).collect::<Vec<&str>>())
+        .filter(|elm| elm.len() > 0)
+        .map(|elm| {
+            let mut key = elm[0].to_string();
+            key.pop();
+            let val = elm[1].parse::<u64>().unwrap();
+            (key, val)
+        })
+        .collect();
+
+    MemInfo {
+        total: ByteSize::kb(*mem.get("MemTotal").unwrap()),
+        free: ByteSize::kb(*mem.get("MemFree").unwrap()),
+        avail: ByteSize::kb(*mem.get("MemAvailable").unwrap()),
+        cached: ByteSize::kb(*mem.get("Cached").unwrap()),
+        buffers: ByteSize::kb(*mem.get("Buffers").unwrap()),
+    }
 }
