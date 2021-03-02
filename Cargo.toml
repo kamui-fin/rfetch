@@ -1,10 +1,17 @@
 [package]
 name = "rfetch"
 version = "0.1.0"
-authors = ["Kamui <qntmmagic7@gmail.com>"]
+authors = ["Kamui <qntmmagic7@gmail.com>", "Theodore <64165309+ergpopler@users.noreply.github.com>"]
 edition = "2018"
-
+license = "GPLv3"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+# Further optimize release builds to create a smaller memory footprint and faster execution time.
+# These will both slightly impact compile times, but .cargo/config.toml is set to use `lld` which may somewhat counteract this.
+[profile.release]
+lto = true
+codegen-units=1
 
 [dependencies]
 clap = "2.33.3"
