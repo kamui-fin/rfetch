@@ -3,10 +3,12 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fs;
 use std::time::Duration;
-
+use std::path::Path;
+use std::sync::mpsc::channel;
+use std::thread;
 pub struct CPUInfo {
     model_name: String,
-    cpu_mhz: f64,
+    cpu_mhz: f32,
 }
 
 pub struct MemInfo<T> {
@@ -43,7 +45,19 @@ fn c_ptr_to_string(ptr: *const i8) -> String {
 }
 
 pub fn get_cpu_info() -> Vec<CPUInfo> {
-    let data = fs::read_to_string("/proc/cpuinfo").unwrap();
+    
+    let (send, recv) = channel();
+    thread::spawn(move || {
+        if Path::new("/proc/cpuinfo").exists(){
+            send.send(fs::read_to_string("/proc/cpuinfo").unwrap());
+        } else {
+            panic!("/proc/cpuinfo doesn't exist, check if you have permission or if /proc is mounted.");
+        }
+
+    });
+   
+    let data = recv.recv().unwrap();
+
     let blocks = data
         .split("\n")
         .filter(|elm| elm.starts_with("model name") || elm.starts_with("cpu MHz"))
@@ -54,7 +68,7 @@ pub fn get_cpu_info() -> Vec<CPUInfo> {
     for block in blocks.chunks(2) {
         let cpu = CPUInfo {
             model_name: String::from(block[0]),
-            cpu_mhz: block[1].parse::<f64>().unwrap(),
+            cpu_mhz: block[1].parse::<f32>().unwrap(),
         };
         cpus.push(cpu);
     }
@@ -63,7 +77,22 @@ pub fn get_cpu_info() -> Vec<CPUInfo> {
 }
 
 pub fn get_mem_info() -> MemInfo<ByteSize> {
-    let data = fs::read_to_string("/proc/meminfo").unwrap();
+   
+    // validate that path's exist to cause a *CLEAN* panic, thus making debugging more reasonable.
+    let (send, recv) = channel();
+    
+    thread::spawn(move ||{
+        if Path::new("/proc/meminfo").exists(){
+            send.send(fs::read_to_string("/proc/meminfo").unwrap()).unwrap();
+        } else {
+            panic!("Do not have access to /proc/meminfo, check if it's mounted.");
+        }
+    });
+    
+
+    let data = recv.recv().unwrap();
+
+    
     let mem: HashMap<String, u64> = data
         .split("\n")
         .map(|kv| kv.split_whitespace().take(2).collect::<Vec<&str>>())
@@ -122,7 +151,17 @@ pub fn get_color_scheme() -> Vec<Color> {
 }
 
 pub fn get_distro() -> Distro {
-    let os_release = fs::read_to_string("/etc/os-release").unwrap();
+    let (send, recv) = channel();
+        thread::spawn(move || {
+            if Path::new("/etc/os-release").exists(){
+                send.send(fs::read_to_string("/etc-os-release").unwrap());
+            } else {
+                panic!("/etc/os-release doesn't exist, check your permissions?");
+            }
+    
+        });
+        let os_release = recv.recv().unwrap();
+    
     let os_release: HashMap<String, String> = os_release
         .split("\n")
         .filter(|line| !line.is_empty())
