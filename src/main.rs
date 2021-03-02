@@ -8,6 +8,7 @@ extern crate pretty_env_logger;
 use clap::{App, Arg};
 
 mod stats;
+use stats::*;
 
 fn main() {
     pretty_env_logger::init();
