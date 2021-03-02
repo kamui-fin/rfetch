@@ -140,7 +140,7 @@ pub fn get_sysinfo() -> SysInfo {
         let mut inf = std::mem::MaybeUninit::<libc::sysinfo>::uninit();
         libc::sysinfo(inf.as_mut_ptr());
         inf.assume_init();
-        let inf = *inf.as_ptr()
+        let inf = *inf.as_ptr();
 
         let uptime = Duration::new(inf.uptime as u64, 0);
         let process_num = inf.procs;
