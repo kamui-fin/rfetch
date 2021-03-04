@@ -1,15 +1,22 @@
+extern crate minreq;
+
 use bytesize::ByteSize;
 use chrono::prelude::{DateTime, Local};
 use isolang::Language;
-use std::ffi::CStr;
 use std::fs;
+use std::path::PathBuf;
 use std::time::Duration;
-use std::{collections::HashMap, ffi::CString};
+use std::{collections::HashMap, net::Ipv4Addr};
 
 // TODO:
 // Replace unwraps with proper error handling
 // Re-consider uses of `String` in some scenarios
 // Try to utilize async and multi-threading for better performance
+
+pub enum IpType {
+    Public,
+    Private,
+}
 
 pub struct CPUInfo {
     pub model_name: String,
@@ -24,20 +31,27 @@ pub struct MemInfo<T> {
     pub used: T,
 }
 
+pub struct MountInfo {
+    pub device: String,
+    pub m_pnt: String,
+    pub fs_type: String,
+}
+
 pub struct SysInfo {
     pub uptime: Duration,
     pub process_num: u16,
 }
+
 pub struct UserInfo {
     pub name: String,
-    pub home: String,
-    pub shell: String,
+    pub home: PathBuf,
+    pub shell: PathBuf,
 }
 
 pub struct MachineInfo {
     pub arch: String,
     pub kernel: String,
-    pub hostname: String,
+    pub nodename: String,
 }
 
 pub struct Distro {
@@ -51,19 +65,18 @@ pub struct LocaleInfo {
 }
 
 pub struct FsInfo<T> {
-    pub mount_point: String,
-    pub filesys: String,
     pub total_size: T,
     pub free: T,
+    pub used: T,
 }
 
 pub struct Color(pub String);
 
-// Utility functions
+pub struct DeviceInfo(pub String);
 
-fn c_ptr_to_string(ptr: *const i8) -> String {
-    unsafe { CStr::from_ptr(ptr).to_owned().into_string().unwrap() }
-}
+pub struct Temp(pub i32);
+
+// Utility functions
 
 fn get_env(key: String) -> String {
     std::env::var(key).unwrap()
@@ -79,15 +92,14 @@ pub fn cpu_info() -> Vec<CPUInfo> {
         .filter(|elm| elm.starts_with("model name") || elm.starts_with("cpu MHz"))
         .map(|elm| elm.split(": ").nth(1).unwrap())
         .collect::<Vec<&str>>();
-    let mut cpus = vec![];
 
-    for block in blocks.chunks(2) {
-        let cpu = CPUInfo {
-            model_name: String::from(block[0]),
-            cpu_mhz: block[1].parse::<f64>().unwrap(),
-        };
-        cpus.push(cpu);
-    }
+    let cpus = blocks
+        .chunks(2)
+        .map(|ck| CPUInfo {
+            model_name: String::from(ck[0]),
+            cpu_mhz: ck[1].parse::<f64>().unwrap(),
+        })
+        .collect::<Vec<CPUInfo>>();
 
     cpus
 }
@@ -122,28 +134,22 @@ pub fn mem_info() -> MemInfo<ByteSize> {
 }
 
 pub fn user_info() -> UserInfo {
-    unsafe {
-        let pw_ent = *libc::getpwuid(libc::getuid());
-        UserInfo {
-            name: c_ptr_to_string(pw_ent.pw_name),
-            home: c_ptr_to_string(pw_ent.pw_dir),
-            shell: c_ptr_to_string(pw_ent.pw_shell),
-        }
+    let user = nix::unistd::User::from_uid(nix::unistd::getuid())
+        .unwrap()
+        .unwrap();
+    UserInfo {
+        name: user.name,
+        home: user.dir,
+        shell: user.shell,
     }
 }
 
 pub fn machine_info() -> MachineInfo {
-    unsafe {
-        let mut buffer = std::mem::MaybeUninit::<libc::utsname>::uninit();
-        libc::uname(buffer.as_mut_ptr());
-        buffer.assume_init();
-        let buffer = *buffer.as_ptr();
-
-        MachineInfo {
-            arch: c_ptr_to_string(buffer.machine.as_ptr()),
-            kernel: c_ptr_to_string(buffer.release.as_ptr()),
-            hostname: c_ptr_to_string(buffer.nodename.as_ptr()),
-        }
+    let mach = nix::sys::utsname::uname();
+    MachineInfo {
+        arch: String::from(mach.machine()),
+        kernel: String::from(mach.release()),
+        nodename: String::from(mach.nodename()),
     }
 }
 
@@ -172,19 +178,10 @@ pub fn distro() -> Distro {
 }
 
 pub fn sysinfo() -> SysInfo {
-    unsafe {
-        let mut inf = std::mem::MaybeUninit::<libc::sysinfo>::uninit();
-        libc::sysinfo(inf.as_mut_ptr());
-        inf.assume_init();
-        let inf = *inf.as_ptr();
-
-        let uptime = Duration::new(inf.uptime as u64, 0);
-        let process_num = inf.procs;
-
-        SysInfo {
-            uptime,
-            process_num,
-        }
+    let sinf = nix::sys::sysinfo::sysinfo().unwrap();
+    SysInfo {
+        uptime: sinf.uptime(),
+        process_num: sinf.process_count(),
     }
 }
 
@@ -201,38 +198,71 @@ pub fn locale() -> LocaleInfo {
     LocaleInfo { locale, hr_lang }
 }
 
-pub fn disk_usage() -> Vec<FsInfo<ByteSize>> {
-    unsafe {
-        let mut disk_stats: Vec<FsInfo<ByteSize>> = vec![];
+pub fn get_mounts() -> Vec<MountInfo> {
+    let proc_mnts_data = fs::read_to_string("/proc/mounts")
+        .unwrap()
+        .split("\n")
+        .filter(|elm| elm.len() > 0)
+        .map(|line| {
+            let clms: Vec<&str> = line.split_whitespace().collect();
+            MountInfo {
+                device: String::from(clms[0]),
+                m_pnt: String::from(clms[1]),
+                fs_type: String::from(clms[2]),
+            }
+        })
+        .collect::<Vec<MountInfo>>();
+    proc_mnts_data
+}
 
-        let mtab = CString::new("/etc/mtab").unwrap();
-        let perm = CString::new("r").unwrap();
-        let mnts = libc::setmntent(mtab.as_ptr(), perm.as_ptr());
+pub fn disk_usage(path: &str) -> FsInfo<ByteSize> {
+    let p_stat = nix::sys::statfs::statfs(path).unwrap();
 
-        let mut mntent = libc::getmntent(mnts);
+    let free = p_stat.block_size() as u64 * p_stat.blocks_available();
+    let total = p_stat.block_size() as u64 * p_stat.blocks();
+    let used = total - free;
 
-        while !mntent.is_null() {
-            let mnt_pnt = (*mntent).mnt_dir;
-            let filesys = (*mntent).mnt_type;
-            let mut stat_buf = std::mem::MaybeUninit::<libc::statfs>::uninit();
-            libc::statfs(mnt_pnt, stat_buf.as_mut_ptr());
-            stat_buf.assume_init();
-            let stat_buf = *stat_buf.as_ptr();
-            let free = stat_buf.f_bsize as u64 * stat_buf.f_bavail;
-            let total = stat_buf.f_bsize as u64 * stat_buf.f_blocks;
+    FsInfo {
+        free: ByteSize::b(free),
+        used: ByteSize::b(used),
+        total_size: ByteSize::b(total),
+    }
+}
 
-            disk_stats.push(FsInfo {
-                mount_point: c_ptr_to_string(mnt_pnt),
-                filesys: c_ptr_to_string(filesys),
-                total_size: ByteSize::b(total),
-                free: ByteSize::b(free),
-            });
+pub fn device() -> DeviceInfo {
+    DeviceInfo(
+        fs::read_to_string("/sys/class/dmi/id/product_name")
+            .unwrap()
+            .trim()
+            .to_string(),
+    )
+}
 
-            mntent = libc::getmntent(mnts);
+pub fn get_temp() -> Temp {
+    let temp_data = fs::read_to_string("/sys/class/thermal/thermal_zone0/temp").unwrap();
+    Temp(temp_data.trim().parse::<i32>().unwrap())
+}
+
+pub fn ip(iptype: IpType) -> Option<Ipv4Addr> {
+    match iptype {
+        IpType::Public => {
+            let response = minreq::get("http://ifconfig.me").send().unwrap();
+            response.as_str().unwrap().parse::<Ipv4Addr>().ok()
         }
-
-        libc::endmntent(mnts);
-        disk_stats
+        IpType::Private => {
+            let addrs = nix::ifaddrs::getifaddrs().unwrap();
+            for ifaddr in addrs {
+                if let Some(x) = ifaddr.address {
+                    if let nix::sys::socket::AddressFamily::Inet = x.family() {
+                        let addr = x.to_string().split(":").next().unwrap().to_string();
+                        if addr.starts_with("192.168.1.") {
+                            return addr.parse::<Ipv4Addr>().ok();
+                        }
+                    }
+                }
+            }
+            None
+        }
     }
 }
 
@@ -247,5 +277,4 @@ pub fn disk_usage() -> Vec<FsInfo<ByteSize>> {
 // pub fn display_info() {}
 // pub fn init_system() {}
 // pub fn volume() {}
-// pub fn ip() {}
 // pub fn in_speed() {}
