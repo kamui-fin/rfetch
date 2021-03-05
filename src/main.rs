@@ -29,6 +29,7 @@ fn main() {
     let machine_info = stats::machine_info();
     let mem = stats::mem_info();
     let sys_info = stats::sysinfo();
+    let pkgs = stats::packages(distro.name.as_str());
 
     let fmt_uptime = humantime::format_duration(sys_info.uptime).to_string();
 
@@ -44,16 +45,18 @@ fn main() {
     let user_host = format!("{}@{}", user_info.name, machine_info.nodename);
     println!("{}", user_host);
     println!("{}", "-".repeat(user_host.len()));
-    println!("OS:\t{}", distro.name);
-    println!("Kernel:\t{}", machine_info.kernel);
-    println!("Uptime:\t{}", fmt_uptime);
-    println!("Shell:\t{}", user_info.shell.to_str().unwrap());
-    println!("Memory:\t{} / {}", mem.used, mem.total);
+    println!("OS: {}", distro.name);
+    println!("Kernel: {}", machine_info.kernel);
+    println!("Uptime: {}", fmt_uptime);
+    println!("Shell: {}", user_info.shell.to_str().unwrap());
+    println!("Memory: {} / {}", mem.used, mem.total);
+    println!("Packages: {}", pkgs);
     println!("");
 
     for (indx, color) in colors.into_iter().enumerate() {
         if indx == 8 {
-            println!("")
+            break;
+            // println!("")
         }
         print!("{}  \x1B[0m", color.0,);
     }

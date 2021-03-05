@@ -265,8 +265,8 @@ pub fn ip(iptype: IpType) -> Option<Ipv4Addr> {
     }
 }
 
-pub fn packages(distro: &str) -> usize {
-    match distro {
+pub fn packages(distro: String) -> usize {
+    match distro.as_str() {
         "Arch Linux" => {
             let output = std::process::Command::new("pacman")
                 .arg("-Qq")
@@ -289,3 +289,7 @@ pub fn packages(distro: &str) -> usize {
         _ => 0,
     }
 }
+
+// A few more feature ideas
+
+// pub fn gpu_info() {}
