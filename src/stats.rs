@@ -3,10 +3,10 @@ extern crate minreq;
 use bytesize::ByteSize;
 use chrono::prelude::{DateTime, Local};
 use isolang::Language;
-use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::{collections::HashMap, net::Ipv4Addr};
+use std::{error::Error, fs};
 
 // TODO:
 // Replace unwraps with proper error handling
@@ -18,6 +18,7 @@ pub enum IpType {
     Private,
 }
 
+#[derive(Debug)]
 pub struct CPUInfo {
     pub model_name: String,
     pub cpu_mhz: f64,
@@ -87,21 +88,20 @@ fn get_env(key: String) -> String {
 
 pub fn cpu_info() -> Vec<CPUInfo> {
     let data = fs::read_to_string("/proc/cpuinfo").unwrap();
+
     let blocks = data
         .split("\n")
         .filter(|elm| elm.starts_with("model name") || elm.starts_with("cpu MHz"))
         .map(|elm| elm.split(": ").nth(1).unwrap())
         .collect::<Vec<&str>>();
 
-    let cpus = blocks
+    blocks
         .chunks(2)
         .map(|ck| CPUInfo {
             model_name: String::from(ck[0]),
             cpu_mhz: ck[1].parse::<f64>().unwrap(),
         })
-        .collect::<Vec<CPUInfo>>();
-
-    cpus
+        .collect()
 }
 
 pub fn mem_info() -> MemInfo<ByteSize> {
