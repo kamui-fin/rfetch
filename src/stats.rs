@@ -9,7 +9,6 @@ use std::time::Duration;
 use std::{collections::HashMap, net::Ipv4Addr};
 
 // TODO:
-// Replace unwraps with proper error handling
 // Re-consider uses of `String` in some scenarios
 // Try to utilize async and multi-threading for better performance
 
