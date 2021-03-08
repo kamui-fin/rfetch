@@ -17,49 +17,49 @@ fn main() {
         )
         .get_matches();
 
-    let user_info = stats::user_info();
-    let default_config = user_info.home.join(".config/rfetch/config.toml");
+    // let user_info = stats::user_info();
+    // let default_config = user_info.home.join(".config/rfetch/config.toml");
 
-    let _conf_file = matches
-        .value_of("config")
-        .unwrap_or(default_config.to_str().unwrap());
+    // let _conf_file = matches
+    //     .value_of("config")
+    //     .unwrap_or(default_config.to_str().unwrap());
 
-    let distro = stats::distro();
-    let colors = stats::color_scheme();
-    let machine_info = stats::machine_info();
-    let mem = stats::mem_info();
-    let sys_info = stats::sysinfo();
-    let pkgs = stats::packages(distro.name.as_str());
+    // let distro = stats::distro();
+    // let colors = stats::color_scheme();
+    // let machine_info = stats::machine_info();
+    // let mem = stats::mem_info();
+    // let sys_info = stats::sysinfo();
+    // let pkgs = stats::packages(distro.name.as_str());
 
-    let fmt_uptime = humantime::format_duration(sys_info.uptime).to_string();
+    // let fmt_uptime = humantime::format_duration(sys_info.uptime).to_string();
 
-    // TODO: Add ascii art logos
-    // println!(r"    .--.");
-    // println!(r"   |o_o |");
-    // println!(r"   |:_/ |");
-    // println!(r"  //   \ \");
-    // println!(r" (|     | )");
-    // println!(r"/'\_   _/`\");
-    // println!(r"\___)=(___/");
+    // // TODO: Add ascii art logos
+    // // println!(r"    .--.");
+    // // println!(r"   |o_o |");
+    // // println!(r"   |:_/ |");
+    // // println!(r"  //   \ \");
+    // // println!(r" (|     | )");
+    // // println!(r"/'\_   _/`\");
+    // // println!(r"\___)=(___/");
 
-    let user_host = format!("{}@{}", user_info.name, machine_info.nodename);
-    println!("{}", user_host);
-    println!("{}", "-".repeat(user_host.len()));
-    println!("OS: {}", distro.name);
-    println!("Kernel: {}", machine_info.kernel);
-    println!("Uptime: {}", fmt_uptime);
-    println!("Shell: {}", user_info.shell.to_str().unwrap());
-    println!("Memory: {} / {}", mem.used, mem.total);
-    println!("Packages: {}", pkgs);
-    println!("");
+    // let user_host = format!("{}@{}", user_info.name, machine_info.nodename);
+    // println!("{}", user_host);
+    // println!("{}", "-".repeat(user_host.len()));
+    // println!("OS: {}", distro.name);
+    // println!("Kernel: {}", machine_info.kernel);
+    // println!("Uptime: {}", fmt_uptime);
+    // println!("Shell: {}", user_info.shell.to_str().unwrap());
+    // println!("Memory: {} / {}", mem.used, mem.total);
+    // println!("Packages: {}", pkgs);
+    // println!("");
 
-    for (indx, color) in colors.into_iter().enumerate() {
-        if indx == 8 {
-            break;
-            // println!("")
-        }
-        print!("{}  \x1B[0m", color.0,);
-    }
+    // for (indx, color) in colors.into_iter().enumerate() {
+    //     if indx == 8 {
+    //         break;
+    //         // println!("")
+    //     }
+    //     print!("{}  \x1B[0m", color.0,);
+    // }
 
-    println!("");
+    // println!("");
 }

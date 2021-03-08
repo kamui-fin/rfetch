@@ -78,69 +78,69 @@ pub struct Temp(pub i32);
 
 // Utility functions
 
-fn get_env(key: String) -> String {
-    std::env::var(key).unwrap()
+fn get_env(key: String) -> Option<String> {
+    Some(std::env::var(key).ok()?)
 }
 
 // Functions for getting statistics and information about the system
 // Used by the rfetch frontend (might seperate this into another crate)
 
-pub fn cpu_info() -> Vec<CPUInfo> {
-    let data = fs::read_to_string("/proc/cpuinfo").unwrap();
+pub fn cpu_info() -> Option<Vec<CPUInfo>> {
+    let data = fs::read_to_string("/proc/cpuinfo").ok()?;
 
     let blocks = data
         .split("\n")
         .filter(|elm| elm.starts_with("model name") || elm.starts_with("cpu MHz"))
-        .map(|elm| elm.split(": ").nth(1).unwrap())
-        .collect::<Vec<&str>>();
+        .map(|elm| elm.split(": ").nth(1))
+        .collect::<Vec<Option<&str>>>();
 
     blocks
         .chunks(2)
-        .map(|ck| CPUInfo {
-            model_name: String::from(ck[0]),
-            cpu_mhz: ck[1].parse::<f64>().unwrap(),
+        .map(|ck| -> Option<CPUInfo> {
+            Some(CPUInfo {
+                model_name: String::from(ck[0]?),
+                cpu_mhz: ck[1]?.parse::<f64>().ok()?,
+            })
         })
         .collect()
 }
 
-pub fn mem_info() -> MemInfo<ByteSize> {
-    let data = fs::read_to_string("/proc/meminfo").unwrap();
-    let mem: HashMap<String, u64> = data
+pub fn mem_info() -> Option<MemInfo<ByteSize>> {
+    let data = fs::read_to_string("/proc/meminfo").ok()?;
+    let mem = data
         .split("\n")
         .map(|kv| kv.split_whitespace().take(2).collect::<Vec<&str>>())
         .filter(|elm| elm.len() > 0)
-        .map(|elm| {
+        .map(|elm| -> (String, Option<u64>) {
             let mut key = elm[0].to_string();
             key.pop();
-            let val = elm[1].parse::<u64>().unwrap();
+            let val = elm[1].parse::<u64>().ok();
             (key, val)
         })
-        .collect();
+        .collect::<HashMap<String, Option<u64>>>();
 
     let total = mem["MemTotal"];
     let avail = mem["MemAvailable"];
     let cached = mem["Cached"];
     let buffers = mem["Buffers"];
-    let used = total - avail;
+    let used = total? - avail?;
 
-    MemInfo {
-        total: ByteSize::kb(total),
-        avail: ByteSize::kb(avail),
-        cached: ByteSize::kb(cached),
-        buffers: ByteSize::kb(buffers),
+    Some(MemInfo {
+        total: ByteSize::kb(total?),
+        avail: ByteSize::kb(avail?),
+        cached: ByteSize::kb(cached?),
+        buffers: ByteSize::kb(buffers?),
         used: ByteSize::kb(used),
-    }
+    })
 }
 
-pub fn user_info() -> UserInfo {
-    let user = nix::unistd::User::from_uid(nix::unistd::getuid())
-        .unwrap()
-        .unwrap();
-    UserInfo {
+pub fn user_info() -> Option<UserInfo> {
+    let user = nix::unistd::User::from_uid(nix::unistd::getuid()).ok()??;
+    Some(UserInfo {
         name: user.name,
         home: user.dir,
         shell: user.shell,
-    }
+    })
 }
 
 pub fn machine_info() -> MachineInfo {
@@ -159,8 +159,8 @@ pub fn color_scheme() -> Vec<Color> {
         .collect::<Vec<Color>>()
 }
 
-pub fn distro() -> Distro {
-    let os_release = fs::read_to_string("/etc/os-release").unwrap();
+pub fn distro() -> Option<Distro> {
+    let os_release = fs::read_to_string("/etc/os-release").ok()?;
     let os_release: HashMap<String, String> = os_release
         .split("\n")
         .filter(|line| !line.is_empty())
@@ -170,36 +170,35 @@ pub fn distro() -> Distro {
         })
         .collect();
 
-    Distro {
+    Some(Distro {
         name: os_release["NAME"].clone(),
         color: os_release["ANSI_COLOR"].clone(),
-    }
+    })
 }
 
-pub fn sysinfo() -> SysInfo {
-    let sinf = nix::sys::sysinfo::sysinfo().unwrap();
-    SysInfo {
+pub fn sysinfo() -> Option<SysInfo> {
+    let sinf = nix::sys::sysinfo::sysinfo().ok()?;
+    Some(SysInfo {
         uptime: sinf.uptime(),
         process_num: sinf.process_count(),
-    }
+    })
 }
 
 pub fn current_datetime() -> DateTime<Local> {
     Local::now()
 }
 
-pub fn locale() -> LocaleInfo {
-    let locale = get_env(String::from("LANG"));
-    let hr_lang = Language::from_locale(locale.as_str())
-        .unwrap()
+pub fn locale() -> Option<LocaleInfo> {
+    let locale = get_env(String::from("LANG"))?;
+    let hr_lang = Language::from_locale(locale.as_str())?
         .to_name()
         .to_string();
-    LocaleInfo { locale, hr_lang }
+    Some(LocaleInfo { locale, hr_lang })
 }
 
-pub fn get_mounts() -> Vec<MountInfo> {
+pub fn get_mounts() -> Option<Vec<MountInfo>> {
     let proc_mnts_data = fs::read_to_string("/proc/mounts")
-        .unwrap()
+        .ok()?
         .split("\n")
         .filter(|elm| elm.len() > 0)
         .map(|line| {
@@ -211,81 +210,80 @@ pub fn get_mounts() -> Vec<MountInfo> {
             }
         })
         .collect::<Vec<MountInfo>>();
-    proc_mnts_data
+    Some(proc_mnts_data)
 }
 
-pub fn disk_usage(path: &str) -> FsInfo<ByteSize> {
-    let p_stat = nix::sys::statfs::statfs(path).unwrap();
-
+pub fn disk_usage(path: &str) -> Option<FsInfo<ByteSize>> {
+    let p_stat = nix::sys::statfs::statfs(path).ok()?;
     let free = p_stat.block_size() as u64 * p_stat.blocks_available();
     let total = p_stat.block_size() as u64 * p_stat.blocks();
     let used = total - free;
 
-    FsInfo {
+    Some(FsInfo {
         free: ByteSize::b(free),
         used: ByteSize::b(used),
         total_size: ByteSize::b(total),
-    }
+    })
 }
 
-pub fn device() -> DeviceInfo {
-    DeviceInfo(
-        fs::read_to_string("/sys/class/dmi/id/product_name")
-            .unwrap()
-            .trim()
-            .to_string(),
-    )
+pub fn device() -> Option<DeviceInfo> {
+    let data = fs::read_to_string("/sys/class/dmi/id/product_name").ok()?;
+    Some(DeviceInfo(data.trim().to_string()))
 }
 
-pub fn get_temp() -> Temp {
-    let temp_data = fs::read_to_string("/sys/class/thermal/thermal_zone0/temp").unwrap();
-    Temp(temp_data.trim().parse::<i32>().unwrap())
+pub fn get_temp() -> Option<Temp> {
+    let data = fs::read_to_string("/sys/class/thermal/thermal_zone0/temp").ok()?;
+    Some(Temp(data.trim().parse::<i32>().ok()?))
 }
 
 pub fn ip(iptype: IpType) -> Option<Ipv4Addr> {
     match iptype {
         IpType::Public => {
-            let response = minreq::get("http://ifconfig.me").send().unwrap();
-            response.as_str().unwrap().parse::<Ipv4Addr>().ok()
+            let response = minreq::get("http://ifconfig.me").send();
+            let res = response.ok()?;
+            let res_str = res.as_str().ok()?;
+            return res_str.parse::<Ipv4Addr>().ok();
         }
         IpType::Private => {
-            let addrs = nix::ifaddrs::getifaddrs().unwrap();
+            let addrs = nix::ifaddrs::getifaddrs().ok()?;
+
             for ifaddr in addrs {
                 if let Some(x) = ifaddr.address {
                     if let nix::sys::socket::AddressFamily::Inet = x.family() {
-                        let addr = x.to_string().split(":").next().unwrap().to_string();
-                        if addr.starts_with("192.168.1.") {
-                            return addr.parse::<Ipv4Addr>().ok();
+                        let x = x.to_string();
+                        let addr = x.split(":").next()?.parse::<Ipv4Addr>().ok()?;
+                        if addr.is_private() {
+                            return Some(addr);
                         }
                     }
                 }
             }
-            None
         }
     }
+    return None;
 }
 
-pub fn packages(distro: &str) -> usize {
+pub fn packages(distro: &str) -> Option<usize> {
     match distro {
         "Arch Linux" => {
             let output = std::process::Command::new("pacman")
                 .arg("-Qq")
                 .output()
-                .unwrap();
-            String::from_utf8_lossy(&output.stdout).split("\n").count()
+                .ok()?;
+            Some(String::from_utf8_lossy(&output.stdout).split("\n").count())
         }
         "Gentoo" => {
             let mut count = 0;
-            for entry in fs::read_dir("/var/db/pkg").unwrap() {
+            for entry in fs::read_dir("/var/db/pkg").ok()? {
                 let entry = entry.unwrap();
-                let metadata = fs::metadata(entry.path()).unwrap();
+                let metadata = fs::metadata(entry.path()).ok()?;
 
                 if metadata.is_dir() {
-                    count += fs::read_dir(entry.path()).unwrap().count();
+                    count += fs::read_dir(entry.path()).ok()?.count();
                 }
             }
-            count
+            Some(count)
         }
-        _ => 0,
+        _ => None,
     }
 }
