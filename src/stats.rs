@@ -164,8 +164,11 @@ pub fn distro() -> Option<Distro> {
         .split("\n")
         .filter(|line| !line.is_empty())
         .map(|elm| {
-            let data = elm.split("=").collect::<Vec<&str>>();
-            (data[0].to_string(), data[1].to_string())
+            let data = elm
+                .split("=")
+                .map(|s| s.to_string().replace("\"", ""))
+                .collect::<Vec<String>>();
+            (data[0].clone(), data[1].clone())
         })
         .collect();
 
