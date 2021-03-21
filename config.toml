@@ -1,0 +1,3 @@
+modules = ["shell", "distro", "packages", "uptime", "memory", "kernel"]
+delimiter = "~>"
+show_bg_colors = false
