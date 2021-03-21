@@ -4,8 +4,22 @@ use std::fs;
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub modules: Vec<String>,
-    pub show_bg_colors: bool,
     pub delimiter: String,
+    pub title_color: String,
+    pub colors: ColorConfig,
+    pub user_host: UserHostConfig,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ColorConfig {
+    pub show_bg_colors: bool,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct UserHostConfig {
+    pub line: bool,
+    pub line_symbol: String,
+    pub line_color: String,
 }
 
 impl Config {

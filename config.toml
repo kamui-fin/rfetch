@@ -1,3 +1,11 @@
-modules = ["shell", "distro", "packages", "uptime", "memory", "kernel"]
+modules = ["user_host", "shell", "distro", "packages", "uptime", "memory", "kernel", "colors"]
 delimiter = "~>"
+title_color = "blue"
+
+[user_host]
+line = true
+line_symbol = "━"
+line_color = "magenta"
+
+[colors]
 show_bg_colors = false
