@@ -1,4 +1,4 @@
-modules = ["user_host", "shell", "distro", "packages", "uptime", "memory", "kernel", "colors"]
+modules = ["user_host", "shell", "distro", "packages", "uptime", "memory", "kernel", "ip", "cpu", "disk_usage", "process_num", "arch", "temp", "locale", "device_name", "time", "date"]
 delimiter = "~>"
 title_color = "blue"
 
@@ -8,4 +8,8 @@ line_symbol = "━"
 line_color = "magenta"
 
 [colors]
+enabled = true
 show_bg_colors = false
+
+[ip]
+public = false

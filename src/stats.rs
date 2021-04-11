@@ -9,7 +9,6 @@ use std::time::Duration;
 use std::{collections::HashMap, net::Ipv4Addr};
 
 // TODO:
-// Re-consider uses of `String` in some scenarios
 // Try to utilize async and multi-threading for better performance
 
 pub enum IpType {
@@ -28,12 +27,6 @@ pub struct MemInfo<T> {
     pub cached: T,
     pub buffers: T,
     pub used: T,
-}
-
-pub struct MountInfo {
-    pub device: String,
-    pub m_pnt: String,
-    pub fs_type: String,
 }
 
 pub struct SysInfo {
@@ -196,23 +189,6 @@ pub fn locale() -> Option<LocaleInfo> {
         .to_name()
         .to_string();
     Some(LocaleInfo { locale, hr_lang })
-}
-
-pub fn get_mounts() -> Option<Vec<MountInfo>> {
-    let proc_mnts_data = fs::read_to_string("/proc/mounts")
-        .ok()?
-        .split("\n")
-        .filter(|elm| elm.len() > 0)
-        .map(|line| {
-            let clms: Vec<&str> = line.split_whitespace().collect();
-            MountInfo {
-                device: String::from(clms[0]),
-                m_pnt: String::from(clms[1]),
-                fs_type: String::from(clms[2]),
-            }
-        })
-        .collect::<Vec<MountInfo>>();
-    Some(proc_mnts_data)
 }
 
 pub fn disk_usage(path: &str) -> Option<FsInfo<ByteSize>> {

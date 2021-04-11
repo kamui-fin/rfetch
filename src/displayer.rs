@@ -33,6 +33,8 @@ impl Displayer {
         let user_info = stats::user_info();
         let distro = stats::distro();
         let machine_info = stats::machine_info();
+        let sys_info = stats::sysinfo();
+        let dt = stats::current_datetime();
 
         let mut output = String::from("");
 
@@ -84,15 +86,15 @@ impl Displayer {
                         let pkgs = stats::packages(distro.name.as_str());
                         if let Some(pkgs) = pkgs {
                             output += &format!(
-                                "{} ~> {}\n",
+                                "{} {} {}\n",
                                 "pkgs".color(self.config.title_color.clone()),
+                                self.config.delimiter,
                                 pkgs
                             );
                         }
                     }
                 }
                 "uptime" => {
-                    let sys_info = stats::sysinfo();
                     if let Some(sys_info) = &sys_info {
                         let fmt_uptime = humantime::format_duration(sys_info.uptime).to_string();
                         output += &format!(
@@ -123,12 +125,120 @@ impl Displayer {
                         machine_info.kernel,
                     );
                 }
-                "colors" => {
-                    output += "\n";
-                    output += self.colors().as_str();
+                "ip" => {
+                    let ip_type = if self.config.ip.public {
+                        stats::IpType::Public
+                    } else {
+                        stats::IpType::Private
+                    };
+                    let ip_info = stats::ip(ip_type);
+                    if let Some(ip_info) = ip_info {
+                        output += &format!(
+                            "{}   {} {}\n",
+                            "ip".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            ip_info
+                        );
+                    }
+                }
+                "cpu" => {
+                    let cpu_info = stats::cpu_info();
+                    if let Some(cpu_info) = cpu_info {
+                        output += &format!(
+                            "{}  {} {}\n",
+                            "cpu".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            cpu_info[0].model_name
+                        );
+                    }
+                }
+                "disk_usage" => {
+                    let disk_usage = stats::disk_usage("/");
+                    if let Some(disk_usage) = disk_usage {
+                        output += &format!(
+                            "{} {} {} / {}\n",
+                            "disk".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            disk_usage.used,
+                            disk_usage.total_size
+                        );
+                    }
+                }
+                "process_num" => {
+                    if let Some(sys_info) = &sys_info {
+                        output += &format!(
+                            "{} {} {}\n",
+                            "proc".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            sys_info.process_num
+                        );
+                    }
+                }
+                "arch" => {
+                    output += &format!(
+                        "{} {} {}\n",
+                        "arch".color(self.config.title_color.clone()),
+                        self.config.delimiter,
+                        machine_info.arch
+                    );
+                }
+                "temp" => {
+                    let temp = stats::get_temp();
+                    if let Some(temp) = temp {
+                        output += &format!(
+                            "{} {} {}°C\n",
+                            "temp".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            temp.0 / 1000
+                        );
+                    }
+                }
+                "locale" => {
+                    let locale = stats::locale();
+                    if let Some(locale) = locale {
+                        output += &format!(
+                            "{}  {} {}\n",
+                            "loc".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            locale.locale
+                        );
+                    }
+                }
+                "device_name" => {
+                    let dev_n = stats::device();
+                    if let Some(dev_n) = dev_n {
+                        output += &format!(
+                            "{} {} {}\n",
+                            "host".color(self.config.title_color.clone()),
+                            self.config.delimiter,
+                            dev_n.0
+                        );
+                    }
+                }
+                "time" => {
+                    let dt = stats::current_datetime();
+                    output += &format!(
+                        "{} {} {}\n",
+                        "time".color(self.config.title_color.clone()),
+                        self.config.delimiter,
+                        dt.format("%k:%M %P")
+                    );
+                }
+                "date" => {
+                    output += &format!(
+                        "{} {} {}\n",
+                        "date".color(self.config.title_color.clone()),
+                        self.config.delimiter,
+                        dt.format("%b %d %Y")
+                    );
                 }
                 _ => {}
             }
+        }
+
+        if self.config.colors.enabled {
+            output += "\n";
+            output += self.colors().as_str();
         }
 
         println!("{}", output);

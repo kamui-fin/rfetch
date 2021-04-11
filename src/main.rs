@@ -19,7 +19,8 @@ fn main() {
         )
         .get_matches();
 
-    let conf = config::Config::new();
+    let conf_file = matches.value_of("config").unwrap_or("config.toml");
+    let conf = config::Config::new(conf_file);
 
     let displayer = displayer::Displayer::new(conf);
     displayer.fetch();
