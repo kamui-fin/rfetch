@@ -19,8 +19,10 @@ fn main() {
         )
         .get_matches();
 
-    let conf_file = matches.value_of("config").unwrap_or("config.toml");
-    let conf = config::Config::new(conf_file);
+    let home = stats::get_env("HOME").expect("HOME variable has not been set");
+    let def_conf_path = home + "/.config/rfetch/config.toml";
+    let conf_path = matches.value_of("config").unwrap_or(def_conf_path.as_str());
+    let conf = config::Config::new(conf_path);
 
     let displayer = displayer::Displayer::new(conf);
     displayer.fetch();

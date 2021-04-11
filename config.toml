@@ -1,4 +1,8 @@
-modules = ["user_host", "shell", "distro", "packages", "uptime", "memory", "kernel", "ip", "cpu", "disk_usage", "process_num", "arch", "temp", "locale", "device_name", "time", "date"]
+# Example rfetch config file
+# Place this in ~/.config/rfetch/
+
+# modules = ["user_host", "shell", "distro", "packages", "uptime", "memory", "kernel", "ip", "cpu", "disk_usage", "process_num", "arch", "temp", "locale", "device_name", "time", "date"]
+modules = ["user_host", "shell", "distro", "packages", "uptime", "memory", "kernel"]
 delimiter = "~>"
 title_color = "blue"
 

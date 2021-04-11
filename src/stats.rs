@@ -70,7 +70,7 @@ pub struct Temp(pub i32);
 
 // Utility functions
 
-fn get_env(key: String) -> Option<String> {
+pub fn get_env(key: &str) -> Option<String> {
     Some(std::env::var(key).ok()?)
 }
 
@@ -184,7 +184,7 @@ pub fn current_datetime() -> DateTime<Local> {
 }
 
 pub fn locale() -> Option<LocaleInfo> {
-    let locale = get_env(String::from("LANG"))?;
+    let locale = get_env("LANG")?;
     let hr_lang = Language::from_locale(locale.as_str())?
         .to_name()
         .to_string();
