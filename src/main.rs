@@ -24,12 +24,10 @@ fn main() {
     let def_conf_path = home + "/.config/rfetch/config.toml";
     let conf_path = if let Some(config) = matches.value_of("config") {
         config
+    } else if Path::new(&def_conf_path).exists() {
+        def_conf_path.as_str()
     } else {
-        if Path::new(&def_conf_path).exists() {
-            def_conf_path.as_str()
-        } else {
-            "config.toml"
-        }
+        "config.toml"
     };
     let conf = config::Config::new(conf_path);
 

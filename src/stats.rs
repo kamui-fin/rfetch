@@ -16,7 +16,7 @@ pub enum IpType {
     Private,
 }
 
-pub struct CPUInfo {
+pub struct CpuInfo {
     pub model_name: String,
     pub cpu_mhz: f64,
 }
@@ -71,25 +71,25 @@ pub struct Temp(pub i32);
 // Utility functions
 
 pub fn get_env(key: &str) -> Option<String> {
-    Some(std::env::var(key).ok()?)
+    std::env::var(key).ok()
 }
 
 // Functions for getting statistics and information about the system
 // Used by the rfetch frontend (might seperate this into another crate)
 
-pub fn cpu_info() -> Option<Vec<CPUInfo>> {
+pub fn cpu_info() -> Option<Vec<CpuInfo>> {
     let data = fs::read_to_string("/proc/cpuinfo").ok()?;
 
     let blocks = data
-        .split("\n")
+        .split('\n')
         .filter(|elm| elm.starts_with("model name") || elm.starts_with("cpu MHz"))
         .map(|elm| elm.split(": ").nth(1))
         .collect::<Vec<Option<&str>>>();
 
     blocks
         .chunks(2)
-        .map(|ck| -> Option<CPUInfo> {
-            Some(CPUInfo {
+        .map(|ck| -> Option<CpuInfo> {
+            Some(CpuInfo {
                 model_name: String::from(ck[0]?),
                 cpu_mhz: ck[1]?.parse::<f64>().ok()?,
             })
@@ -100,9 +100,9 @@ pub fn cpu_info() -> Option<Vec<CPUInfo>> {
 pub fn mem_info() -> Option<MemInfo<ByteSize>> {
     let data = fs::read_to_string("/proc/meminfo").ok()?;
     let mem = data
-        .split("\n")
+        .split('\n')
         .map(|kv| kv.split_whitespace().take(2).collect::<Vec<&str>>())
-        .filter(|elm| elm.len() > 0)
+        .filter(|elm| !elm.is_empty())
         .map(|elm| -> (String, Option<u64>) {
             let mut key = elm[0].to_string();
             key.pop();
@@ -154,11 +154,11 @@ pub fn color_scheme() -> Vec<Color> {
 pub fn distro() -> Option<Distro> {
     let os_release = fs::read_to_string("/etc/os-release").ok()?;
     let os_release: HashMap<String, String> = os_release
-        .split("\n")
+        .split('\n')
         .filter(|line| !line.is_empty())
         .map(|elm| {
             let data = elm
-                .split("=")
+                .split('=')
                 .map(|s| s.to_string().replace("\"", ""))
                 .collect::<Vec<String>>();
             (data[0].clone(), data[1].clone())
@@ -229,7 +229,7 @@ pub fn ip(iptype: IpType) -> Option<Ipv4Addr> {
                 if let Some(x) = ifaddr.address {
                     if let nix::sys::socket::AddressFamily::Inet = x.family() {
                         let x = x.to_string();
-                        let addr = x.split(":").next()?.parse::<Ipv4Addr>().ok()?;
+                        let addr = x.split(':').next()?.parse::<Ipv4Addr>().ok()?;
                         if addr.is_private() {
                             return Some(addr);
                         }
@@ -238,7 +238,7 @@ pub fn ip(iptype: IpType) -> Option<Ipv4Addr> {
             }
         }
     }
-    return None;
+    None
 }
 
 pub fn packages(distro: &str) -> Option<usize> {
@@ -248,7 +248,7 @@ pub fn packages(distro: &str) -> Option<usize> {
                 .arg("-Qq")
                 .output()
                 .ok()?;
-            Some(String::from_utf8_lossy(&output.stdout).split("\n").count())
+            Some(String::from_utf8_lossy(&output.stdout).split('\n').count())
         }
         "Gentoo" => {
             let mut count = 0;

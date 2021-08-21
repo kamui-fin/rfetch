@@ -4,7 +4,7 @@ use crate::{
     stats::{MachineInfo, UserInfo},
 };
 use colored::*;
-use stats::{MemInfo, SysInfo};
+use stats::SysInfo;
 
 pub struct Displayer {
     config: Config,
@@ -56,7 +56,7 @@ impl Displayer {
                         .color(self.config.user_host.line_color.clone())
                 ));
             }
-            return Some(String::from(output));
+            return Some(output);
         }
         None
     }
@@ -138,7 +138,7 @@ impl Displayer {
             self.config.delimiter,
             machine_info.kernel,
         );
-        return String::from(output);
+        String::from(output)
     }
 
     fn show_ip(&self) -> Option<String> {
@@ -169,7 +169,7 @@ impl Displayer {
                 self.config.delimiter,
                 cpu_info[0].model_name
             );
-            Some(String::from(output));
+            return Some(String::from(output));
         }
         None
     }
@@ -209,7 +209,7 @@ impl Displayer {
             self.config.delimiter,
             machine_info.arch
         );
-        return String::from(output);
+        String::from(output)
     }
 
     fn show_temp(&self) -> Option<String> {
@@ -262,7 +262,7 @@ impl Displayer {
             self.config.delimiter,
             dt.format("%k:%M %P")
         );
-        return String::from(output);
+        String::from(output)
     }
 
     fn show_date(&self) -> String {
@@ -273,7 +273,7 @@ impl Displayer {
             self.config.delimiter,
             dt.format("%b %d %Y")
         );
-        return String::from(output);
+        String::from(output)
     }
 
     pub fn fetch(&self) {
