@@ -31,7 +31,46 @@ pub struct IpConfig {
 
 impl Config {
     pub fn new(path: &str) -> Self {
-        let text = fs::read_to_string(path).expect("Could not find config.toml");
-        toml::from_str(text.as_str()).expect("Unable to parse config file")
+        fn read_config(path: &str) -> Option<Result<Config, toml::de::Error>> {
+            fs::read_to_string(path)
+                .ok()
+                .map(|config_str| toml::from_str(config_str.as_str()))
+        }
+
+        match read_config(path) {
+            Some(config_read_result) => config_read_result.expect("Unable to parse config file"),
+            None => Config::default(),
+        }
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            modules: vec![
+                "user_host",
+                "shell",
+                "distro",
+                "packages",
+                "uptime",
+                "memory",
+                "kernel",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect(),
+            delimiter: String::from("~>"),
+            title_color: String::from("blue"),
+            colors: ColorConfig {
+                enabled: true,
+                show_bg_colors: false,
+            },
+            user_host: UserHostConfig {
+                line: true,
+                line_symbol: String::from("-"),
+                line_color: String::from("magenta"),
+            },
+            ip: IpConfig { public: false },
+        }
     }
 }
