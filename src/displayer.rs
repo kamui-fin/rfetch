@@ -308,7 +308,7 @@ impl Displayer {
                     output += &self.show_kern(&machine_info);
                 }
                 "ip" => {
-                    output += &self.show_ip().unwrap_or("Not connected.".to_string());
+                    output += &self.show_ip().unwrap();
                 }
                 "cpu" => {
                     output += &self.show_cpu().unwrap();
