@@ -148,16 +148,17 @@ impl Displayer {
             stats::IpType::Private
         };
         let ip_info = stats::ip(ip_type);
-        if let Some(ip_info) = ip_info {
-            let output = &format!(
-                "{}   {} {}\n",
-                "ip".color(self.config.title_color.clone()),
-                self.config.delimiter,
-                ip_info
-            );
-            return Some(String::from(output));
-        }
-        None
+        let output = &format!(
+            "{}   {} {}\n",
+            "ip".color(self.config.title_color.clone()),
+            self.config.delimiter,
+            if let Some(ip_info) = ip_info {
+                ip_info.to_string()
+            } else {
+                "not connected".to_string()
+            }
+        );
+        Some(String::from(output))
     }
 
     fn show_cpu(&self) -> Option<String> {
@@ -307,7 +308,7 @@ impl Displayer {
                     output += &self.show_kern(&machine_info);
                 }
                 "ip" => {
-                    output += &self.show_ip().unwrap();
+                    output += &self.show_ip().unwrap_or("Not connected.".to_string());
                 }
                 "cpu" => {
                     output += &self.show_cpu().unwrap();
