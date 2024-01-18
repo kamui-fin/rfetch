@@ -283,8 +283,8 @@ impl Displayer {
     fn show_battery(&self) -> String {
         let batt: BatteryInfo = stats::battery_info().expect("");
         let output = &format!(
-            "{} {} {} ({}%)\n",
-            "date".color(self.config.title_color.clone()),
+            "{}  {} {} ({}%)\n",
+            "bat".color(self.config.title_color.clone()),
             self.config.delimiter,
             batt.status,
             batt.percent
