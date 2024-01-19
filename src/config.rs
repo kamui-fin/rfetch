@@ -55,7 +55,6 @@ impl Default for Config {
                 "uptime",
                 "memory",
                 "kernel",
-                "battery",
             ]
             .into_iter()
             .map(String::from)
