@@ -22,3 +22,4 @@ If you want rfetch to be able to show battery info, you will need to enable the 
 ```bash
 $ cargo build --release --features=battery  
 ```
+This requires [upower](https://upower.freedesktop.org/) to be installed.
