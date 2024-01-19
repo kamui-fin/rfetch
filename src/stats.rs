@@ -189,7 +189,7 @@ pub fn distro() -> Option<Distro> {
         .map(|elm| {
             let data = elm
                 .split('=')
-                .map(|s| s.to_string().replace("\"", ""))
+                .map(|s| s.to_string().replace('\"', ""))
                 .collect::<Vec<String>>();
             (data[0].clone(), data[1].clone())
         })
