@@ -304,21 +304,27 @@ pub fn battery_info() -> Option<BatteryInfo> {
         percent: 0,
     };
 
-    let raw_path = Command::new("upower").args(["-e"]).output().unwrap().stdout;
+    let raw_path = Command::new("upower")
+        .args(["-e"])
+        .output()
+        .expect("Battery module failed. Please make sure upower is installed.")
+        .stdout;
 
-    let paths = String::from_utf8(raw_path).expect("couldn't get battery system info.");
+    let paths = String::from_utf8(raw_path)
+        .expect("Couldn't get battery system info: Invalid upower output.");
     let path: &str = paths
         .split('\n')
         .filter(|s| s.contains("BAT"))
         .last()
-        .expect("no battery system installed.");
+        .expect("Couldn't get battery system info: No battery system installed.");
 
     let raw_stats = Command::new("upower")
         .args(["-i", path])
         .output()
         .unwrap()
         .stdout;
-    let stat_string = String::from_utf8(raw_stats).expect("");
+    let stat_string = String::from_utf8(raw_stats)
+        .expect("Couldn't get battery system info: Invalid upower output.");
     let stats: Vec<String> = stat_string
         .split('\n')
         .filter(|l| l.contains("percentage") | l.contains("state"))
