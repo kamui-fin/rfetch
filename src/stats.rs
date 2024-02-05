@@ -3,6 +3,8 @@ extern crate minreq;
 use bytesize::ByteSize;
 use chrono::prelude::{DateTime, Local};
 use isolang::Language;
+#[cfg(feature = "battery")]
+use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -67,6 +69,34 @@ pub struct Color(pub String);
 pub struct DeviceInfo(pub String);
 
 pub struct Temp(pub i32);
+
+#[cfg(feature = "battery")]
+pub struct BatteryInfo {
+    pub status: BatteryStatus,
+    pub percent: u8,
+}
+
+#[cfg(feature = "battery")]
+pub enum BatteryStatus {
+    Charging,
+    Discharging,
+    Full,
+}
+
+#[cfg(feature = "battery")]
+impl Display for BatteryStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Charging => "charging",
+                Self::Discharging => "discharging",
+                Self::Full => "full",
+            }
+        )
+    }
+}
 
 // Utility functions
 
@@ -159,7 +189,7 @@ pub fn distro() -> Option<Distro> {
         .map(|elm| {
             let data = elm
                 .split('=')
-                .map(|s| s.to_string().replace("\"", ""))
+                .map(|s| s.to_string().replace('\"', ""))
                 .collect::<Vec<String>>();
             (data[0].clone(), data[1].clone())
         })
@@ -264,4 +294,52 @@ pub fn packages(distro: &str) -> Option<usize> {
         }
         _ => None,
     }
+}
+
+#[cfg(feature = "battery")]
+pub fn battery_info() -> Option<BatteryInfo> {
+    use std::process::Command;
+    let mut state: BatteryInfo = BatteryInfo {
+        status: BatteryStatus::Full,
+        percent: 0,
+    };
+
+    let raw_path = Command::new("upower")
+        .args(["-e"])
+        .output()
+        .expect("Battery module failed. Please make sure upower is installed.")
+        .stdout;
+
+    let paths = String::from_utf8(raw_path)
+        .expect("Couldn't get battery system info: Invalid upower output.");
+    let path: &str = paths
+        .split('\n')
+        .filter(|s| s.contains("BAT"))
+        .last()
+        .expect("Couldn't get battery system info: No battery system installed.");
+
+    let raw_stats = Command::new("upower")
+        .args(["-i", path])
+        .output()
+        .unwrap()
+        .stdout;
+    let stat_string = String::from_utf8(raw_stats)
+        .expect("Couldn't get battery system info: Invalid upower output.");
+    let stats: Vec<String> = stat_string
+        .split('\n')
+        .filter(|l| l.contains("percentage") | l.contains("state"))
+        .map(|l| l.split(':').last().unwrap_or("").trim().to_string())
+        .collect();
+
+    for mut s in stats.into_iter() {
+        let str = s.clone();
+        match &str[..] {
+            "charging" => state.status = BatteryStatus::Charging,
+            "discharging" => state.status = BatteryStatus::Discharging,
+            _ if s.pop() == Some('%') => state.percent = s.parse().unwrap_or(0),
+            _ => {}
+        }
+    }
+
+    Some(state)
 }

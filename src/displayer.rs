@@ -1,3 +1,5 @@
+#[cfg(feature = "battery")]
+use crate::stats::BatteryInfo;
 use crate::stats::{self, Distro};
 use crate::{
     config::Config,
@@ -277,6 +279,19 @@ impl Displayer {
         String::from(output)
     }
 
+    #[cfg(feature = "battery")]
+    fn show_battery(&self) -> String {
+        let batt: BatteryInfo = stats::battery_info().expect("");
+        let output = &format!(
+            "{}  {} {} ({}%)\n",
+            "bat".color(self.config.title_color.clone()),
+            self.config.delimiter,
+            batt.status,
+            batt.percent
+        );
+        String::from(output)
+    }
+
     pub fn fetch(&self) {
         let mut output = String::from("");
         let user_info = stats::user_info();
@@ -336,6 +351,10 @@ impl Displayer {
                 }
                 "date" => {
                     output += &self.show_date();
+                }
+                #[cfg(feature = "battery")]
+                "battery" => {
+                    output += &self.show_battery();
                 }
                 _ => {}
             }

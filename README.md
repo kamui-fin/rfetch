@@ -17,3 +17,9 @@ Now you need to copy the default config over with:
 $ mkdir -p ~/.config/rfetch
 $ cp config.toml ~/.config/rfetch
 ```
+
+If you want rfetch to be able to show battery info, you will need to enable the 'battery' feature. Replace the compilation command above with
+```bash
+$ cargo build --release --features=battery  
+```
+This requires [upower](https://upower.freedesktop.org/) to be installed.

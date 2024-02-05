@@ -17,3 +17,6 @@ humantime = "2.1.0"
 minreq = "2.3.1"
 colored = "2"
 serde = { version="1.0", features = ["derive"] }
+
+[features]
+battery = []
